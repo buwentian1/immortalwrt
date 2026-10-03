@@ -249,6 +249,15 @@ ifeq ($(DUMP),1)
   endif
   ifneq ($(findstring arm,$(ARCH)),)
     CPU_TYPE ?= xscale
+    ifneq ($(filter arm1136j-s arm1136jf-s arm1156t2-s,$(CPU_TYPE)),)
+      FEATURES += arm_v6
+    endif
+    ifneq ($(filter arm1176jz-s arm1176jzf-s mpcore mpcorenovfp,$(CPU_TYPE)),)
+      FEATURES += arm_v6k
+    endif
+    ifneq ($(filter cortex-a% generic-armv7-a marvell-pj4,$(CPU_TYPE)),)
+      FEATURES += arm_v7
+    endif
   endif
   ifeq ($(ARCH),powerpc)
     CPU_CFLAGS_603e:=-mcpu=603e
@@ -263,20 +272,10 @@ ifeq ($(DUMP),1)
     CPU_CFLAGS_e5500:=-mcpu=e5500
     CPU_CFLAGS_powerpc64:=-mcpu=powerpc64
   endif
-  ifeq ($(ARCH),sparc)
-    CPU_TYPE = sparc
-    CPU_CFLAGS_ultrasparc = -mcpu=ultrasparc
-  endif
   ifeq ($(ARCH),aarch64)
     CPU_TYPE ?= generic
     CPU_CFLAGS_generic = -mcpu=generic
     CPU_CFLAGS_cortex-a53 = -mcpu=cortex-a53
-  endif
-  ifeq ($(ARCH),arc)
-    CPU_TYPE ?= arc700
-    CPU_CFLAGS += -matomic
-    CPU_CFLAGS_arc700 = -mcpu=arc700
-    CPU_CFLAGS_archs = -mcpu=archs
   endif
   ifeq ($(ARCH),riscv64)
     CPU_TYPE ?= generic
@@ -328,6 +327,9 @@ ifeq ($(DUMP),1)
     ifneq ($(CONFIG_PWM),)
       FEATURES += pwm
     endif
+    ifneq ($(CONFIG_REGULATOR),)
+      FEATURES += regulator
+    endif
     ifneq ($(CONFIG_USB)$(CONFIG_USB_SUPPORT),)
       ifneq ($(CONFIG_USB_ARCH_HAS_HCD)$(CONFIG_USB_EHCI_HCD),)
         FEATURES += usb
@@ -348,15 +350,6 @@ ifeq ($(DUMP),1)
     ifneq ($(CONFIG_CPU_MIPS32_R2),)
       FEATURES += mips16
     endif
-    ifneq ($(CONFIG_CPU_V6),)
-      FEATURES += arm_v6
-    endif
-    ifneq ($(CONFIG_CPU_V6K),)
-      FEATURES += arm_v6
-    endif
-    ifneq ($(CONFIG_CPU_V7),)
-      FEATURES += arm_v7
-    endif
 
     # remove duplicates
     FEATURES:=$(sort $(FEATURES))
@@ -370,7 +363,7 @@ endif
 
 define BuildTargets/DumpCurrent
   .PHONY: dumpinfo
-  dumpinfo : export DESCRIPTION=$$(Target/Description)
+  dumpinfo: $(call shexport,Target/Description)
   dumpinfo:
 	@echo 'Target: $(TARGETID)'; \
 	 echo 'Target-Board: $(BOARD)'; \
@@ -387,7 +380,7 @@ define BuildTargets/DumpCurrent
 	 echo 'Linux-Kernel-Arch: $(LINUX_KARCH)'; \
 	$(if $(SUBTARGET),,$(if $(DEFAULT_SUBTARGET), echo 'Default-Subtarget: $(DEFAULT_SUBTARGET)'; )) \
 	 echo 'Target-Description:'; \
-	 echo "$$$$DESCRIPTION"; \
+	 echo "$$$$$(call shvar,Target/Description);"; \
 	 echo '@@'; \
 	 $(if $(DEFAULT_PROFILE),echo 'Target-Default-Profile: $(DEFAULT_PROFILE)';) \
 	 echo 'Default-Packages: $(DEFAULT_PACKAGES)'; \

@@ -41,8 +41,11 @@ platform_pre_upgrade() {
 
 platform_do_upgrade() {
 	case "$(board_name)" in
+	cmcc,mr3000d-ci|\
 	cmcc,pz-l8|\
+	cmcc,rax3000q|\
 	elecom,wrc-x3000gs2|\
+	elecom,wrc-x3000gst2|\
 	iodata,wn-dax3000gr)
 		local delay
 
@@ -60,6 +63,15 @@ platform_do_upgrade() {
 	glinet,gl-b3000)
 		glinet_do_upgrade "$1"
 		;;
+	glinet,gl-x2000)
+		# The stock UBI fills the whole partition (0 free LEBs) with its
+		# own wifi_fw and ubi_rootfs volumes, leaving no room for the
+		# OpenWrt rootfs. Drop them before upgrading.
+		CI_UBIPART="rootfs"
+		remove_oem_ubi_volume ubi_rootfs
+		remove_oem_ubi_volume wifi_fw
+		glinet_do_upgrade "$1"
+		;;
 	linksys,mr5500|\
 	linksys,mx2000|\
 	linksys,mx5500|\
@@ -68,7 +80,37 @@ platform_do_upgrade() {
 		remove_oem_ubi_volume squashfs
 		nand_do_upgrade "$1"
 		;;
-	xiaomi,ax6000)
+	linksys,mx6200)
+		linksys_bootconfig_pre_upgrade "$1"
+		remove_oem_ubi_volume ubi_rootfs
+		nand_do_upgrade "$1"
+		;;
+	tplink,archer-ax55-v1|\
+	tplink,eap650-outdoor-v1)
+		# Dual boot: install into the inactive rootfs/rootfs_1 slot,
+		# then point tp_boot_idx at it. The running slot is left
+		# untouched as a fallback - if the new image fails to load,
+		# TP-Link's U-Boot boots the other slot on its own (only on
+		# load failure though: there is no boot counter, a kernel
+		# that boots and then crashes is not detected).
+		local idx=1
+		CI_UBIPART="rootfs_1"
+		if grep -q 'ubi.mtd=rootfs_1' /proc/cmdline; then
+			idx=0
+			CI_UBIPART="rootfs"
+		fi
+		fw_setenv tp_boot_idx $idx || {
+			echo "failed to set tp_boot_idx $idx"
+			return 1
+		}
+		# a slot last written by TP-Link firmware carries extra
+		# volumes that would leave no room for ours
+		remove_oem_ubi_volume ubi_rootfs
+		remove_oem_ubi_volume tp_data
+		nand_do_upgrade "$1"
+		;;
+	xiaomi,ax6000|\
+	xiaomi,redmi-ax5400)
 		# Make sure that UART is enabled
 		fw_setenv boot_wait on
 		fw_setenv uart_en 1
@@ -83,31 +125,20 @@ platform_do_upgrade() {
 		# Kernel and rootfs are placed in 2 different UBI
 		CI_KERN_UBIPART="ubi_kernel"
 		CI_ROOT_UBIPART="rootfs"
+		CI_DATA_UBIPART="rootfs"
 		nand_do_upgrade "$1"
 		;;
 	yuncore,ax830|\
-	yuncore,ax850)
+	yuncore,ax850|\
+	zyxel,scr50axe)
 		CI_UBIPART="rootfs"
 		remove_oem_ubi_volume ubi_rootfs
 		remove_oem_ubi_volume bt_fw
 		remove_oem_ubi_volume wifi_fw
 		nand_do_upgrade "$1"
 		;;
-	jdcloud,re-cs-03)
-		CI_KERNPART="0:HLOS"
-		CI_ROOTPART="rootfs"
-		emmc_do_upgrade "$1"
-		;;
 	*)
 		default_do_upgrade "$1"
-		;;
-	esac
-}
-
-platform_copy_config() {
-	case "$(board_name)" in
-	jdcloud,re-cs-03)
-		emmc_copy_config
 		;;
 	esac
 }

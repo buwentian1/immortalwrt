@@ -9,12 +9,23 @@ board=$(board_name)
 case "$FIRMWARE" in
 "ath11k/IPQ8074/hw2.0/cal-ahb-c000000.wifi.bin")
 	case "$board" in
+	arista,c360)
+		case "$(uci -q get ap_c360.mode.mode)" in
+		6g)
+			caldata_extract "0:art" 0x1000 0x20000
+			;;
+		*)
+			caldata_extract "0:art" 0x71800 0x20000
+			;;
+		esac
+		;;
 	asus,rt-ax89x)
 		CI_UBIPART="UBI_DEV"
 		caldata_extract_ubi "Factory" 0x1000 0x20000
 		;;
 	aliyun,ap8220|\
 	arcadyan,aw1000|\
+	arista,c260|\
 	buffalo,wxr-5950ax12|\
 	cmcc,rm2-6|\
 	compex,wpq873|\
@@ -22,6 +33,10 @@ case "$FIRMWARE" in
 	edgecore,eap102|\
 	edimax,cax1800|\
 	netgear,rax120v2|\
+	netgear,rbr750|\
+	netgear,rbr850|\
+	netgear,rbs850|\
+	netgear,rbs750|\
 	netgear,sxr80|\
 	netgear,sxs80|\
 	netgear,wax218|\
@@ -40,6 +55,7 @@ case "$FIRMWARE" in
 	zte,mf269|\
 	zte,mf269-stock|\
 	zyxel,nbg7815|\
+	zyxel,nwa110ax|\
 	zyxel,nwa210ax)
 		caldata_extract "0:art" 0x1000 0x20000
 		;;
@@ -52,13 +68,16 @@ case "$FIRMWARE" in
 		caldata_extract "0:art" 0x1000 0x20000
 		ath11k_remove_regdomain
 		;;
+	tcl,linkhub-hh500v)
+		caldata_extract "0:ART" 0x1000 0x20000
+		;;
 	prpl,haze|\
 	spectrum,sax1v1k|\
 	verizon,cr1000a)
 		caldata_extract_mmc "0:ART" 0x1000 0x20000
 		;;
-	tplink,eap620hd-v1|\
-	tplink,eap660hd-v1)
+	tplink,eap620-hd-v1|\
+	tplink,eap660-hd-v1)
 		caldata_from_file "/tmp/factory_data/radio" 0 0x20000
 		;;
 	esac
@@ -66,6 +85,16 @@ case "$FIRMWARE" in
 "ath11k/QCN9074/hw1.0/cal-pci-0000:01:00.0.bin"|\
 "ath11k/QCN9074/hw1.0/cal-pci-0001:01:00.0.bin")
 	case "$board" in
+	arista,c360)
+		case "$FIRMWARE" in
+		"ath11k/QCN9074/hw1.0/cal-pci-0000:01:00.0.bin")
+			caldata_extract "0:art" 0x26800 0x20000
+			;;
+		"ath11k/QCN9074/hw1.0/cal-pci-0001:01:00.0.bin")
+			caldata_extract "0:art" 0x4c000 0x20000
+			;;
+		esac
+		;;
 	linksys,mx8500)
 		caldata_extract "0:art" 0x26800 0x20000
 		ath11k_remove_regdomain

@@ -364,7 +364,7 @@ dhcp_host_add() {
 
 	config_get_bool dns "$cfg" dns 0
 	[ "$dns" = "1" ] && [ -n "$ip" ] && [ -n "$name" ] && {
-		echo "$ip $name${DOMAIN:+.$DOMAIN}" >> "$HOSTFILE_TMP"
+		echo "$ip $name${DOMAIN:+.$DOMAIN $name}" >> "$HOSTFILE_TMP"
 	}
 
 	config_get mac "$cfg" mac
@@ -575,8 +575,8 @@ dhcp_add() {
 	config_get_bool dynamicdhcpv4 "$cfg" dynamicdhcpv4 $dynamicdhcp
 	config_get_bool dynamicdhcpv6 "$cfg" dynamicdhcpv6 $dynamicdhcp
 
-	config_get dhcpv4 "$cfg" dhcpv4
-	config_get dhcpv6 "$cfg" dhcpv6
+	config_get dhcpv4 "$cfg" dhcpv4 disabled
+	config_get dhcpv6 "$cfg" dhcpv6 disabled
 
 	config_get ra "$cfg" ra
 	config_get ra_management "$cfg" ra_management
@@ -1380,7 +1380,9 @@ start_service() {
 		DEFAULT_INSTANCE="$first_instance" # No unnamed config section was found.
 	fi
 
-	if [ -n "$instance" ]; then
+	if [ -n "$BOOT" ]; then
+		dnsmasq_start "$DEFAULT_INSTANCE"
+	elif [ -n "$instance" ]; then
 		[ "$instance_found" -gt 0 ] || return
 		dnsmasq_start "$instance"
 	else
@@ -1388,10 +1390,17 @@ start_service() {
 	fi
 }
 
+reload_dnsmasq() {
+	start_service "$@"
+	# Reload hosts and leases before procd installs the new instance data.
+	# Sending HUP after service.set can kill a new ujail before its signal
+	# handlers are installed. Keep the pending procd JSON in the parent.
+	(procd_send_signal dnsmasq "$@")
+}
+
 reload_service() {
 	nftables_clear
-	rc_procd start_service "$@"
-	procd_send_signal dnsmasq "$@"
+	rc_procd reload_dnsmasq "$@"
 }
 
 stop_service() {

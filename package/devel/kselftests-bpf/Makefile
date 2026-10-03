@@ -27,7 +27,7 @@ define Package/kselftests-bpf
 	+libelf +zlib +libpthread +librt +libpcap @!IN_SDK \
 	@KERNEL_DEBUG_FS @KERNEL_DEBUG_INFO_BTF @KERNEL_BPF_EVENTS
   TITLE:=Linux Kernel Selftests (BPF)
-  URL:=http://www.kernel.org
+  URL:=https://www.kernel.org
 endef
 
 define Package/kselftests-bpf/description
@@ -45,7 +45,7 @@ MAKE_PATH:=tools/testing/selftests/bpf
 MAKE_VARS:= \
 	ARCH="$(LINUX_KARCH)" \
 	CROSS_COMPILE="$(TARGET_CROSS)" \
-	EXTRA_CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" \
+	USERCFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" \
 	LDLIBS="$(TARGET_LDFLAGS)" \
 	TOOLCHAIN_INCLUDE="$(TOOLCHAIN_INC_DIRS)" \
 	KBUILD_OUTPUT="$(LINUX_DIR)"

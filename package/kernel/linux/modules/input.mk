@@ -38,6 +38,23 @@ endef
 $(eval $(call KernelPackage,hid-generic))
 
 
+define KernelPackage/uhid
+  SUBMENU:=$(INPUT_MODULES_MENU)
+  TITLE:=User-space HID device support
+  DEPENDS:=+kmod-hid
+  KCONFIG:=CONFIG_UHID
+  FILES:=$(LINUX_DIR)/drivers/hid/uhid.ko
+  AUTOLOAD:=$(call AutoProbe,uhid)
+endef
+
+define KernelPackage/uhid/description
+ Kernel module that lets user space create HID devices, used by BlueZ
+ for Bluetooth Low Energy HID devices
+endef
+
+$(eval $(call KernelPackage,uhid))
+
+
 define KernelPackage/hid-alps
   SUBMENU:=$(INPUT_MODULES_MENU)
   TITLE:=Alps HID device support
@@ -53,6 +70,22 @@ endef
 
 $(eval $(call KernelPackage,hid-alps))
 
+define KernelPackage/input-adc-keys
+  SUBMENU:=$(INPUT_MODULES_MENU)
+  TITLE:=ADC Ladder Buttons support
+  DEPENDS:=+kmod-input-core +kmod-iio-core
+  KCONFIG:= \
+	CONFIG_KEYBOARD_ADC \
+	CONFIG_INPUT_KEYBOARD=y
+  FILES:=$(LINUX_DIR)/drivers/input/keyboard/adc-keys.ko
+  AUTOLOAD:=$(call AutoProbe,adc-keys,1)
+endef
+
+define KernelPackage/input-adc-keys/description
+ Buttons/keys input driver for resistor ladder connected on ADC
+endef
+
+$(eval $(call KernelPackage,input-adc-keys))
 
 define KernelPackage/input-core
   SUBMENU:=$(INPUT_MODULES_MENU)
@@ -83,22 +116,6 @@ endef
 
 $(eval $(call KernelPackage,input-evdev))
 
-define KernelPackage/input-adc-keys
-  SUBMENU:=$(INPUT_MODULES_MENU)
-  TITLE:=ADC Ladder Buttons support
-  DEPENDS:= +kmod-input-core +kmod-iio-core
-  KCONFIG:= \
-	CONFIG_KEYBOARD_ADC \
-	CONFIG_INPUT_KEYBOARD=y
-  FILES:=$(LINUX_DIR)/drivers/input/keyboard/adc-keys.ko
-  AUTOLOAD:=$(call AutoProbe,adc-keys,1)
-endef
-
-define KernelPackage/input-adc-keys/description
- Enable support for ADC Ladder Buttons.
-endef
-
-$(eval $(call KernelPackage,input-adc-keys))
 
 define KernelPackage/input-gpio-keys
   SUBMENU:=$(INPUT_MODULES_MENU)
@@ -206,6 +223,25 @@ define KernelPackage/input-matrixkmap/description
 endef
 
 $(eval $(call KernelPackage,input-matrixkmap))
+
+
+define KernelPackage/input-pwm-beeper
+  SUBMENU:=$(INPUT_MODULES_MENU)
+  TITLE:=PWM beeper support
+  DEPENDS:=@PWM_SUPPORT +kmod-input-core
+  KCONFIG:= \
+	CONFIG_INPUT_MISC=y \
+	CONFIG_INPUT_PWM_BEEPER
+  FILES:= \
+	$(LINUX_DIR)/drivers/input/misc/pwm-beeper.ko
+  AUTOLOAD:=$(call AutoLoad,50,pwm-beeper)
+endef
+
+define KernelPackage/input-pwm-beeper/description
+  Support for PWM based beeper devices
+endef
+
+$(eval $(call KernelPackage,input-pwm-beeper))
 
 
 define KernelPackage/input-touchscreen-ads7846
@@ -347,3 +383,26 @@ define KernelPackage/input-serio-libps2/description
 endef
 
 $(eval $(call KernelPackage,input-serio-libps2))
+
+define KernelPackage/rc-core
+  SUBMENU:=$(INPUT_MODULES_MENU)
+  TITLE:=Remote Controller support
+  KCONFIG:= \
+	CONFIG_RC_DEVICES=y \
+	CONFIG_RC_CORE
+  FILES:=$(LINUX_DIR)/drivers/media/rc/rc-core.ko
+  AUTOLOAD:=$(call AutoProbe,rc-core)
+  DEPENDS:=@!LINUX_6_12 +kmod-input-core
+endef
+
+define KernelPackage/rc-core/description
+ Enable support for Remote Controllers on Linux. This is
+ needed in order to support several video capture adapters,
+ standalone IR receivers/transmitters, and RF receivers.
+
+ Enable this option if you have a video capture board even
+ if you don't need IR, as otherwise, you may not be able to
+ compile the driver for your adapter.
+endef
+
+$(eval $(call KernelPackage,rc-core))

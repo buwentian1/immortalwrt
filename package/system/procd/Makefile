@@ -12,9 +12,9 @@ PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/procd.git
-PKG_MIRROR_HASH:=1c418d1cba203385b3e5889a83d54ed818cd5817b87f1fb41f7238894a41c908
-PKG_SOURCE_DATE:=2025-10-04
-PKG_SOURCE_VERSION:=3b3501abb63d9aa59ccc20acf5f2c2be48190b25
+PKG_MIRROR_HASH:=b193107814e7b378fcbe519749aa1d92994f6d1cbc0c25faf0833f6b46811785
+PKG_SOURCE_DATE:=2026-09-26
+PKG_SOURCE_VERSION:=a6f9ffd4becffac99adf7368b26dde537c721f6f
 CMAKE_INSTALL:=1
 
 PKG_LICENSE:=GPL-2.0
@@ -50,6 +50,7 @@ define Package/procd
   $(call Package/procd/Default)
   VARIANT:=default
   CONFLICTS:=procd-selinux
+  DEFAULT_VARIANT:=1
 endef
 
 define Package/procd-selinux
@@ -64,21 +65,22 @@ define Package/procd-ujail
   SECTION:=base
   CATEGORY:=Base system
   DEPENDS:=@KERNEL_NAMESPACES +@KERNEL_UTS_NS +@KERNEL_IPC_NS +@KERNEL_PID_NS \
-	  +libubox +libubus +libuci +libblobmsg-json
+	  +libubox +libubus +libuci +libblobmsg-json +libudebug
+  PKGFLAGS+=nonshared
   TITLE:=OpenWrt process jail helper
 endef
 
 define Package/procd-seccomp
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=@USE_SECCOMP +libubox +libblobmsg-json
-  TITLE:=OpenWrt process seccomp helper + utrace
+  DEPENDS:=@USE_SECCOMP +ucode +ucode-mod-fs
+  TITLE:=OpenWrt process seccomp helper + trace2seccomp
 endef
 
 define Package/uxc
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+procd-ujail +libubus +libubox +libblobmsg-json +blockd +PACKAGE_uxc:rpcd
+  DEPENDS:=+procd-ujail +libubus +libubox +libblobmsg-json +blockd +odhcpd +ucode +ucode-mod-fs +ucode-mod-ubus +ucode-mod-uci +ucode-mod-uloop +PACKAGE_uxc:rpcd
   TITLE:=OpenWrt container management
   MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
 endef
@@ -129,11 +131,10 @@ define Package/procd-ujail/install
 endef
 
 define Package/procd-seccomp/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/lib
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libpreload-seccomp.so $(1)/lib
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/utrace $(1)/sbin/
-	$(LN) utrace $(1)/sbin/seccomp-trace
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libpreload-trace.so $(1)/lib
+	$(INSTALL_DIR) $(1)/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/trace2seccomp $(1)/sbin/
+	$(LN) trace2seccomp $(1)/sbin/utrace
+	$(LN) trace2seccomp $(1)/sbin/seccomp-trace
 endef
 
 define Package/uxc/conffiles
@@ -141,10 +142,15 @@ define Package/uxc/conffiles
 endef
 
 define Package/uxc/install
-	$(INSTALL_DIR) $(1)/sbin
+	$(INSTALL_DIR) $(1)/sbin $(1)/usr/share/uxc
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/uxc $(1)/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/uxc-net $(1)/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/uxc-stack $(1)/sbin/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/share/uxc/uxc-stack.uc $(1)/usr/share/uxc/
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/uxc.init $(1)/etc/init.d/uxc
+	$(INSTALL_DIR) $(1)/lib/functions
+	$(INSTALL_DATA) ./files/uxc.sh $(1)/lib/functions/
 endef
 
 $(eval $(call BuildPackage,procd))
